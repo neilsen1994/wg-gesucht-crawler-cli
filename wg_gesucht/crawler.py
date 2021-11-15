@@ -37,7 +37,7 @@ class WgGesuchtCrawler:
         self.filter_names = filter_names
         self.share_email = share_email
         self.submit_message_url = (
-            "https://www.wg-gesucht.de/ajax/api/Smp/api.php?action=conversations"
+            "https://www.wg-gesucht.de/ajax/conversations.php?action=conversations"
         )
         self.session = requests.Session()
         self.logger = self.get_logger()
@@ -85,10 +85,33 @@ class WgGesuchtCrawler:
             "display_language": "de",
         }
 
+
+        headers = { 'Accept': 'application/json',
+		'Accept-Encoding': 'gzip, deflate, br',
+		'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+		'Connection': 'keep-alive',
+		'Content-Length': '140',
+		'Content-Type': 'application/json',
+		'Host': 'www.wg-gesucht.de',
+		'Origin': 'https://www.wg-gesucht.de',
+		'Referer': 'https://www.wg-gesucht.de/en/logout.html',
+		'sec-ch-ua': '"Google Chrome";v="95", "Chromium";v="95", ";Not A Brand";v="99"',
+		'sec-ch-ua-mobile': '?0',
+		'sec-ch-ua-platform': '"Windows"',
+		'Sec-Fetch-Dest': 'empty',
+		'Sec-Fetch-Mode': 'cors',
+		'Sec-Fetch-Site': 'same-origin',
+		'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
+		'X-Authorization': 'Bearer',
+		'X-Client-Id': 'wg_desktop_website',
+		'X-Dev-Ref-No': '',
+		'X-Requested-With': 'XMLHttpRequest',
+		'X-User-Id':'' }
+
         try:
             login = self.session.post(
-                "https://www.wg-gesucht.de/ajax/api/Smp/api.php?action=login",
-                json=payload,
+                "https://www.wg-gesucht.de/ajax/sessions.php?action=login",
+                json=payload, headers=headers
             )
         except requests.exceptions.Timeout:
             self.logger.exception("Timed out trying to log in")
@@ -264,7 +287,7 @@ class WgGesuchtCrawler:
         )
         url_list = list()
         for wg_filter in filters:
-            # resets for each fitler, otherwise will immediately skip other filters
+            # resets for each filter, otherwise will immediately skip other filters
             self.continue_next_page = True
             while self.continue_next_page:
                 search_results_page = self.get_page(wg_filter)
@@ -389,6 +412,7 @@ class WgGesuchtCrawler:
             return
 
         submit_form_page = self.get_page(send_message_url)
+
         submit_form_page_soup = BeautifulSoup(submit_form_page.content, "html.parser")
         submit_form = submit_form_page_soup.find("form", {"id": "messenger_form"})
 
@@ -399,6 +423,9 @@ class WgGesuchtCrawler:
             self.update_files(url, ad_info)
             return
         
+        page_language = submit_form_page_soup.find("a", {"class": "btn btn-sm wgg_white language_flag dropdown-toggle"}).text.strip()
+        self.logger.info("Language of the website: %s", page_language)
+
         ad_submitter = (
             submit_form_page_soup.find(
                 attrs={"class": "control-label", "for": "message_input"}
@@ -410,13 +437,33 @@ class WgGesuchtCrawler:
         )
         ad_info["ad_submitter"] = ad_submitter
 
+        cookies_dict = self.session.cookies.get_dict()
+        header_authx = 'Bearer ' + cookies_dict['X-Access-Token']
+        header_clidx = cookies_dict['X-Client-Id']
+        header_xdevref_no = cookies_dict['X-Dev-Ref-No']
+        
         headers = {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache",
-            "Referer": send_message_url,
-            "Accept": "application/json, text/javascript, */*",
-            "Origin": "https://www.wg-gesucht.de",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+            'Connection': 'keep-alive',
+            'Content-Length': '213',
+            'Content-Type': 'application/json',
+            'Host': 'www.wg-gesucht.de',
+            'Origin': 'https://www.wg-gesucht.de',
+            'Referer': send_message_url,
+            'sec-ch-ua': '"Google Chrome";v="95", "Chromium";v="95", ";Not A Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
+            'X-Authorization': header_authx ,
+            'X-Client-Id': header_clidx,
+            'X-Dev-Ref-No': header_xdevref_no,
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-User-Id': '14933794'
         }
 
         try:
@@ -463,9 +510,13 @@ class WgGesuchtCrawler:
         filters_to_check = self.fetch_filters()
 
         ad_list = self.fetch_ads(filters_to_check)
-
+     
+        cnter = 0
         for ad_url in ad_list:
             self.email_apartment(ad_url, template_text)
+            cnter = cnter + 1
+            if cnter == 1:
+                break
 
         time_now = datetime.datetime.now().strftime("%H:%M:%S")
         self.logger.info("Program paused at %s... Will resume in 4-5 minutes", time_now)

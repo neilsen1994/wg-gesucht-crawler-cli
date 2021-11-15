@@ -1,6 +1,6 @@
 import os
 import csv
-from .logger import get_logger
+from logger import get_logger
 
 
 def create_folders(dirname, logs_folder):

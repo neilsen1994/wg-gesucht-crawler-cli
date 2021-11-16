@@ -406,7 +406,7 @@ class WgGesuchtCrawler:
             )
         except AttributeError:
             self.logger.exception(
-                "Could not find submit form, you have possibly already sent a message to this user"
+                "Could not find submit form (orange 1), you have possibly already sent a message to this user"
             )
             self.update_files(url, ad_info)
             return
@@ -418,7 +418,7 @@ class WgGesuchtCrawler:
 
         if not submit_form:
             self.logger.exception(
-                "Could not find submit form, you have possibly already sent a message to this user"
+                "Could not find submit form (orange 2), you have possibly already sent a message to this user"
             )
             self.update_files(url, ad_info)
             return
@@ -515,7 +515,7 @@ class WgGesuchtCrawler:
             self.email_apartment(ad_url, template_text)
 
         time_now = datetime.datetime.now().strftime("%H:%M:%S")
-        self.logger.info("Program paused at %s... Will resume in 4-5 minutes", time_now)
+        self.logger.info("Program paused at %s... Will resume in 30-90 seconds", time_now)
         self.logger.info(
             "WG-Gesucht checked %s %s since running",
             self.counter,

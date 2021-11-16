@@ -470,7 +470,7 @@ class WgGesuchtCrawler:
             payload = self.get_payload(submit_form, template_text)
         except AttributeError:
             self.logger.exception(
-                "Could not find submit form, you have possibly already sent a message to this user"
+                "Could not find submit form in the webpage (orange), you have possibly already sent a message to this user"
             )
             self.update_files(url, ad_info)
             return
@@ -511,12 +511,8 @@ class WgGesuchtCrawler:
 
         ad_list = self.fetch_ads(filters_to_check)
      
-        cnter = 0
         for ad_url in ad_list:
             self.email_apartment(ad_url, template_text)
-            cnter = cnter + 1
-            if cnter == 1:
-                break
 
         time_now = datetime.datetime.now().strftime("%H:%M:%S")
         self.logger.info("Program paused at %s... Will resume in 4-5 minutes", time_now)
@@ -526,6 +522,6 @@ class WgGesuchtCrawler:
             "time" if self.counter <= 1 else "times",
         )
         # pauses for 4-5 mins before searching again
-        time.sleep(random.randint(240, 300))
+        time.sleep(random.randint(30, 90))
         self.counter += 1
         self.search()
